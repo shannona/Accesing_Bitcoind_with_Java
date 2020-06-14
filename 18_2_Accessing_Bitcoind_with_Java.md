@@ -198,3 +198,7 @@ Block: 000000004564adfee3738314549f7ca35d96c4da0afc6b232183917086b6d971
 ### For More Information
 
 In this repository you can browse all souce code for bitcoin-rpc-client (https://github.com/Polve/bitcoin-rpc-client)
+
+### Summary Accessing Bitcoind with Java
+
+By using javabitcoinrpc library, you can easily access bitcoind via RPC calls from a Java. To do so, you should create a client, an RPC connection, then create objects and classes to interact with individual RPC calls, some of them with parameters. You can easily create address, sign transactions, query balances and others RPC methods.
