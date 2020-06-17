@@ -7,23 +7,51 @@ Interacting with the `bitcoind` directly and using command-line `curl` can get s
 
 ## Setup Java
 
-To install Java on the VPS Server, you are able to use the `apt-get` command. We will also use [Apache Maven](http://maven.apache.org/) to manage the dependencies, so we will install it together.
+To install Java on the VPS Server, you are able to use the `apt-get` command. We will also use [Apache Maven](http://maven.apache.org/) to manage the dependencies, so we will install it together.  In this project we will create a maven project and indicate minimum configuration about Gradle (https://gradle.org/releases/)
 
 ```
-$ apt-get install openjdk-9-jre-headless maven
+$ apt-get install openjdk-11-jre-headless maven
 ```
 
 You can verify your Java installation:
 ```
 $ java -version
-openjdk version "9-internal"
-OpenJDK Runtime Environment (build 9-internal+0-2016-04-14-195246.buildd.src)
-OpenJDK 64-Bit Server VM (build 9-internal+0-2016-04-14-195246.buildd.src, mixed mode)
+openjdk version "11.0.7" 2020-04-14
+OpenJDK Runtime Environment (build 11.0.7+10-post-Ubuntu-2ubuntu218.04)
+OpenJDK 64-Bit Server VM (build 11.0.7+10-post-Ubuntu-2ubuntu218.04, mixed mode, sharing)
 ```
 
-## Setup Dependency
+## Create maven project
 
-If you use Maven in your Java project, you can include the dependency:
+```
+mvn archetype:generate -DgroupId=com.blockchaincommons.lbtc -DartifactId=java-project -DarchetypeArtifactId=maven-archetype-quickstart -DinteractiveMode=false
+```
+It will download some dependencies
+
+```
+Downloading: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-clean-plugin/2.5/maven-clean-plugin-2.5.pom
+Downloaded: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-clean-plugin/2.5/maven-clean-plugin-2.5.pom (4 KB at 4.2 KB/sec)
+Downloading: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-plugins/22/maven-plugins-22.pom
+Downloaded: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-plugins/22/maven-plugins-22.pom (13 KB at 385.9 KB/sec)
+Downloading: https://repo.maven.apache.org/maven2/org/apache/maven/maven-parent/21/maven-parent-21.pom
+Downloaded: https://repo.maven.apache.org/maven2/org/apache/maven/maven-parent/21/maven-parent-21.pom (26 KB at 559.6 KB/sec)
+Downloading: https://repo.maven.apache.org/maven2/org/apache/apache/10/apache-10.pom
+..............
+```
+It will create a configuration file pom.xml
+
+```
+user@machine:~/BitcoinRpcClient/java-project$ ll
+total 16
+drwxr-xr-x 3 user user 4096 Jun 17 16:47 ./
+drwxr-xr-x 3 user user 4096 Jun 17 15:02 ../
+-rw-r--r-- 1 user user 1175 Jun 17 16:34 pom.xml
+drwxr-xr-x 4 user user 4096 Jun 17 15:02 src/
+user@machine:~/BitcoinRpcClient/java-project$ 
+```
+
+This project uses JavaBitcoindRpcClient, so you need include the dependency editing pom.xml file
+
 ```xml
 <dependency>
   <groupId>wf.bitcoin</groupId>
@@ -31,6 +59,51 @@ If you use Maven in your Java project, you can include the dependency:
   <version>1.1.0</version>
 </dependency>
 ```
+You need to add compiler properties to indicate what JDK version will compile the source code.    
+
+```
+    <properties>
+	<!-- https://maven.apache.org/general.html#encoding-warning -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.11</maven.compiler.source>
+        <maven.compiler.target>1.11</maven.compiler.target>
+    </properties>
+```
+Finally add source code to java classes and execute
+
+```
+user@machine:~/BitcoinRpcClient/java-project$ mvn package
+[INFO] Scanning for projects...
+[INFO]
+[INFO] ------------------< com.blockchaincommons.lbtc:java-project >-------------------
+[INFO] Building java-project 1.0-SNAPSHOT
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+......
+
+-------------------------------------------------------
+ T E S T S
+-------------------------------------------------------
+Running com.blockchaincommons.lbtc.AppTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.067 sec
+
+Results :
+
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0
+
+[INFO]
+[INFO] --- maven-jar-plugin:2.4:jar (default-jar) @ java-project ---
+[INFO] Building jar: /home/user/BitcoinRpcClient/java-project/target/java-project-1.0-SNAPSHOT.jar
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time: 1.956 s
+[INFO] Finished at: 2020-06-2816T12:21:18+31:00
+[INFO] ------------------------------------------------------------------------```
+
+```
+
+
 
 Or if you use Gradle:
 ```groovy
