@@ -305,7 +305,7 @@ signedRawTx complete: true
 Finally you can send signed transaction using 
 
 ```java
-String sentRawTransactionID = bitcoinClient.sendRawTransaction(srTx.hex());
+String sentRawTransactionID = rpcClient.sendRawTransaction(srTx.hex());
 System.out.println("Sent signedRawTx (txID): " + sentRawTransactionID);```
 ```
 This program will output a transaction id:
