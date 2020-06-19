@@ -160,13 +160,29 @@ When you make a RPC call with arguments you need to setup parameters depending m
 
 ### Look up Address
 
-You can look up addresses on your wallet passing it as an argument.
+You can look up addresses on your wallet passing it as an argument.   In this case we use getAddressInfo method to obtain some information about an address.
 
 ```java
 public AddressInfo getAddressInfo(String address) throws GenericRpcException {
     return new AddressInfoMapWrapper((Map<String, ?>) query("getaddressinfo", address));
   }
-  String address = "2MxkZh3Gh3kMBCkLZWM1h6DPAMyCJ2WDNtN";
+
+String addr1 = "bcrt1qs4ylwj2v5v0gq7eqzp9k9vxazdrkexhkghxpyp";   //regtest
+AddressInfo addr1Info = rpcClient.getAddressInfo(addr1);
+System.out.println("Address: " + addr1Info.address());
+System.out.println("HdKeyPath: " + addr1Info.hdKeyPath());
+System.out.println("PubKey: " + addr1Info.pubKey());
+System.out.println("MasterFingerPrint: " + addr1Info.hdMasterFingerprint());
+```
+Output:
+```
+Jun 19, 2020 8:01:56 PM wf.bitcoin.javabitcoindrpcclient.BitcoinJSONRPCClient <clinit>
+WARNING: Currently relying on rpcuser / rpcpassword for authentication. This will soon be deprecated in bitcoind. To use newer auth mechanism based on a temporary password, remove properties rpcuser / rpcpassword from bitcoin.conf
+Address: bcrt1qs4ylwj2v5v0gq7eqzp9k9vxazdrkexhkghxpyp
+HdKeyPath: m/0'/0'/16'
+PubKey: 03cf852403abbcf0431e8c82b414b0c805f5e1b863989cbc9adb3a316510e0d1f5
+MasterFingerPrint: 91cfb0fc
+
 ```
 
 ### Look up Funds
@@ -177,7 +193,6 @@ You can look up your balance.
 public BigDecimal getBalance(String account) throws GenericRpcException {
     return (BigDecimal) query("getbalance");
   }
-  String account = "email@email.com";
   String balance = rpcClient.getBalance(account);
   System.out.println("Balance: " + balance);
   
@@ -185,7 +200,7 @@ public BigDecimal getBalance(String account) throws GenericRpcException {
 Output: 
 
 ```
-Balance: 0.00000000
+Balance: 14701.56249600
 ```
 
 ### Creating an Address
@@ -208,21 +223,71 @@ Priv Key: cTy2AnmAALsHokYzJzTdsUBSqBtypmWfmSNYgG6qQH43euUZgqic
 
 ### Create a Transaction
 
-You can create a raw transaction using createRawTransaction method passing as arguments and ArrayList containing inputs and outputs to be used.
+You can create a raw transaction using createRawTransaction method passing as arguments and ArrayList containing inputs and outputs to be used.  In this example we will create two addresses and we will use generateToAddress method in regtest which it will mine some bitcoin.
 
 ```java
 public String create() throws GenericRpcException {
  return bitcoin.createRawTransaction(new ArrayList<>(inputs), outputs);
 }
 ```
+We use generateToAddress method to mine some bitcoin and we use listUnspent (https://github.com/Polve/bitcoin-rpc-client/blob/master/src/main/java/wf/bitcoin/javabitcoindrpcclient/BitcoinJSONRPCClient.java#L756) method to load object utxos with coins associated with address object addr1.
+
+```
+System.out.println("Created address addr1: " + addr1);
+String addr2 = rpcClient.getNewAddress();
+System.out.println("Created address addr2: " + addr2);
+List<String> generatedBlocksHashes = rpcClient.generateToAddress(110, addr1);
+System.out.println("Generated " + generatedBlocksHashes.size() + " blocks for addr1");
+List<Unspent> utxos = rpcClient.listUnspent(0, Integer.MAX_VALUE, addr1);
+System.out.println("Found " + utxos.size() + " UTXOs (unspent transaction outputs) belonging to addr1");
+```
+
+debug.log
+```
+2020-06-19T18:22:30Z [default wallet] AddToWallet 0bed0fc1b6190b85b93bda6fe752c7596234bea8399827d27e347f35ca68d59f  new
+2020-06-19T18:22:30Z CreateNewBlock(): block weight: 892 txs: 0 fees: 0 sigops 400
+2020-06-19T18:22:30Z UpdateTip: new best=6125a1648f84e11d9d8ee1b003056c20142e9f1e54376f5d117554785957aadf height=1100 version=0x20000000 log2_work=11.104599 tx=1103 date='2020-06-19T18:22:48Z' progress=1.000000 cache=0.0MiB(114txo)
+2020-06-19T18:22:30Z [default wallet] AddToWallet a2690eb4c50b1140dfc77f95db9c8065e8d7e88b2cfbd9a75e9b2dd157857afd  new
+```
+Output
+```
+Created address addr1: bcrt1qs4ylwj2v5v0gq7eqzp9k9vxazdrkexhkghxpyp
+Created address addr2: bcrt1qdp6fut9pmchwacpr28vfszdp5qayza8jkq5t3v
+Generated 110 blocks for addr1
+Found 118 UTXOs (unspent transaction outputs) belonging to addr1
+```
+Now we have created UXTO we can create a transaction,  to perform this we will use  three objects,  TxInput, TxOutput and Transactions Builder.    With this code we got inputs and outputs for our transaction.   Object uxto is a list with all UXTO's belonging to addr1.    We will choose uxto in position one on the list and add it to txb object as input.   Then we add addr2 object as the output and set fee subtracting estimatedFee value.
+
+```
+BitcoinRawTxBuilder txb = new BitcoinRawTxBuilder(rpcClient);
+BigDecimal estimatedFee = BigDecimal.valueOf(0.00000200);
+TxInput in = utxos.get(0);
+txb.in(in);
+		
+txToAddr2Amount = utxos.get(0).amount().subtract(estimatedFee); 
+txb.out(addr2, txToAddr2Amount);
+		
+System.out.println("unsignedRawTx in amount: " + utxos.get(0).amount());
+System.out.println("unsignedRawTx out amount: " + txToAddr2Amount);
+```
+
+Output
+```
+unsignedRawTx in amount: 0.78125000
+unsignedRawTx out amount: 0.78124800
+```
 
 ### Sending Transactions
 
+Before send a transaction we need to create and sign it.
 You can easily send a transaction using the method `sendToAddress()`.
 For more information about sending transactions, you can check [4: Sending Bitcoin Transactions](04_0_Sending_Bitcoin_Transactions.md).
 
 
 ```java
+String unsignedRawTxHex = txb.create();
+System.out.println("Created unsignedRawTx from addr1 to addr2: " + unsignedRawTxHex);
+
 String sendToAddress = rpcClient.sendToAddress("mgnNsZj6tPzpd7JwTTidUKnGoDTkcucLT5", 1);
 System.out.println("Send: " + sendToAddress);
 ```
